@@ -15,21 +15,11 @@ returns boolean as
 begin
   start transaction;
 
-  delete from keyspace where k = _k;
-
   delete from blobvalues where k = _k;
-  if row_count() > 0 then
-    commit;
-    return true;
-  end if;
-
   delete from listvalues where k = _k;
-  if row_count() > 0 then
-    commit;
-    return true;
-  end if;
-
   delete from setvalues where k = _k;
+
+  delete from keyspace where k = _k;
   if row_count() > 0 then
     commit;
     return true;
@@ -122,13 +112,18 @@ end //
 
 create or replace function listGet(_k text)
 returns table as return
-  select v from listvalues where k = _k //
+  select v from listvalues
+    where k = _k
+    order by ts, seq
+  //
 
+-- retrieves elements of list between offset _start and _end (inclusive)
+-- _start is 0 based
 create or replace function listRange(_k text, _start int, _end int)
 returns table as return
   select v
   from (
-    select v, row_number() over (order by ts, seq) as _rownum
+    select v, (row_number() over (order by ts, seq)) - 1 as _rownum
     from listvalues
     where k = _k
   )

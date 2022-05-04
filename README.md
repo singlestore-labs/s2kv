@@ -1,11 +1,11 @@
-# Redis API implemented on top of SingleStore
+# key/value API implemented on top of SingleStore
 
-Start SingleStore somewhere (e.g. docker, managed service) and run `./schema.sql` and `./procedures.sql`. Modify `s2redis/cmd/s2redis/main.go` to have correct connection details.
+Start SingleStore somewhere (e.g. docker, managed service) and run `./schema.sql` and `./procedures.sql`. Modify `s2kv/cmd/s2kv/main.go` to have correct connection details.
 
-Run s2redis like so:
+Run s2kv like so:
 ```bash
-go build s2redis/cmd/s2redis
-./s2redis
+go build s2kv/cmd/s2kv
+./s2kv
 ```
 
 Use `redis-benchmark` for perf testing:

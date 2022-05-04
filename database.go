@@ -1,4 +1,4 @@
-package s2redis
+package s2kv
 
 import (
 	"database/sql"
@@ -13,14 +13,6 @@ import (
 
 type SingleStore struct {
 	db *sqlx.DB
-}
-
-type DatabaseConfig struct {
-	Host     string
-	Port     string
-	Username string
-	Password string
-	Database string
 }
 
 func NewSingleStore(config DatabaseConfig) (*SingleStore, error) {
