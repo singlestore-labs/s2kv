@@ -2,6 +2,7 @@ package s2redis
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -61,13 +62,24 @@ func (s *SingleStore) Close() error {
 	return s.db.Close()
 }
 
+func (s *SingleStore) FlushAll() error {
+	_, err := s.db.Exec("call flushAll()")
+	return err
+}
+
 func (s *SingleStore) KeyExists(k string) (bool, error) {
 	var out bool
-	err := s.db.Get(&out, "echo keyExists(?)", k)
+	err := s.db.Get(&out, "select * from keyExists(?)", k)
 	if err != nil {
 		return false, err
 	}
 	return out, nil
+}
+
+func (s *SingleStore) Keys(pattern string) ([][]byte, error) {
+	var out [][]byte
+	err := s.db.Select(&out, "select k from getKeys(?)", pattern)
+	return out, err
 }
 
 func (s *SingleStore) KeyDelete(k string) (bool, error) {
@@ -79,19 +91,96 @@ func (s *SingleStore) KeyDelete(k string) (bool, error) {
 	return out, nil
 }
 
-func (s *SingleStore) BlobSet(k string, v string) error {
+func (s *SingleStore) BlobSet(k string, v []byte) error {
 	_, err := s.db.Exec("call blobSet(?, ?)", k, v)
 	return err
 }
 
-func (s *SingleStore) BlobGet(k string) (string, error) {
-	var out string
-	err := s.db.Get(&out, "echo blobGet(?)", k)
+func (s *SingleStore) BlobGet(k string) ([]byte, error) {
+	var out []byte
+	err := s.db.Get(&out, "select v from blobGet(?)", k)
 	if err != nil {
-		if sql.ErrNoRows == err {
-			return "", nil
-		}
-		return "", err
+		return nil, err
 	}
 	return out, nil
+}
+
+func (s *SingleStore) ListAppend(k string, v []byte) error {
+	_, err := s.db.Exec("call listAppend(?, ?)", k, v)
+	return err
+}
+
+func (s *SingleStore) ListRemove(k string, v []byte) (int64, error) {
+	var out int64
+	err := s.db.Get(&out, "echo listRemove(?, ?)", k, v)
+	if err != nil {
+		return 0, err
+	}
+	return out, nil
+}
+
+func (s *SingleStore) ListGet(k string) ([][]byte, error) {
+	var out [][]byte
+	err := s.db.Select(&out, "select v from listGet(?)", k)
+	return out, err
+}
+
+func (s *SingleStore) ListRange(k string, start, end int) ([][]byte, error) {
+	var out [][]byte
+	err := s.db.Select(&out, "select v from listRange(?, ?, ?)", k, start, end)
+	return out, err
+}
+
+func (s *SingleStore) SetAdd(k string, v []byte) error {
+	_, err := s.db.Exec("call setAdd(?, ?)", k, v)
+	return err
+}
+
+func (s *SingleStore) SetRemove(k string, v []byte) (int64, error) {
+	var out int64
+	err := s.db.Get(&out, "echo setRemove(?, ?)", k, v)
+	if err != nil {
+		return 0, err
+	}
+	return out, nil
+}
+
+func (s *SingleStore) SetGet(k string) ([][]byte, error) {
+	var out [][]byte
+	err := s.db.Select(&out, "select v from setGet(?)", k)
+	return out, err
+}
+
+func (s *SingleStore) SetUnion(keys ...string) ([][]byte, error) {
+	var out [][]byte
+	var err error
+
+	switch len(keys) {
+	case 2:
+		err = s.db.Select(&out, "select v from setUnion2(?, ?)", keys[0], keys[1])
+	case 3:
+		err = s.db.Select(&out, "select v from setUnion3(?, ?, ?)", keys[0], keys[1], keys[2])
+	case 4:
+		err = s.db.Select(&out, "select v from setUnion4(?, ?, ?, ?)", keys[0], keys[1], keys[2], keys[3])
+	default:
+		err = errors.New("setUnion only supports 2-4 keys")
+	}
+	return out, err
+}
+
+func (s *SingleStore) SetIntersect(keys ...string) ([][]byte, error) {
+	var out [][]byte
+	var err error
+
+	switch len(keys) {
+	case 2:
+		err = s.db.Select(&out, "select v from setIntersect2(?, ?)", keys[0], keys[1])
+	case 3:
+		err = s.db.Select(&out, "select v from setIntersect3(?, ?, ?)", keys[0], keys[1], keys[2])
+	case 4:
+		err = s.db.Select(&out, "select v from setIntersect4(?, ?, ?, ?)", keys[0], keys[1], keys[2], keys[3])
+	default:
+		err = errors.New("setIntersect only supports 2-4 keys")
+	}
+	return out, err
 }

@@ -2,48 +2,20 @@ use kv;
 
 delimiter //
 
-create or replace procedure assertKeyIsList (_k text)
-as
-declare
-  _q QUERY(b boolean) = select exists(select 1 from blobvalues where k = _k) or exists (select 1 from setvalues where k = _k);
-begin
-  if scalar(_q) then
-    RAISE user_exception("key exists but is not a list");
-  end if;
-end //
+create or replace function keyExists (_k text)
+returns table as return
+  select exists(select 1 from keyspace where k = _k) //
 
-create or replace procedure assertKeyIsBlob (_k text)
-as
-declare
-  _q QUERY(b boolean) = select exists(select 1 from listvalues where k = _k) or exists (select 1 from setvalues where k = _k);
-begin
-  if scalar(_q) then
-    RAISE user_exception("key exists but is not a blob");
-  end if;
-end //
-
-create or replace procedure assertKeyIsSet (_k text)
-as
-declare
-  _q QUERY(b boolean) = select exists(select 1 from listvalues where k = _k) or exists (select 1 from blobvalues where k = _k);
-begin
-  if scalar(_q) then
-    RAISE user_exception("key exists but is not a set");
-  end if;
-end //
-
-create or replace procedure keyExists (_k text)
-returns boolean as
-declare
-  _q QUERY(b boolean) = select exists(select * from keyspace where k = _k);
-begin
-  return scalar(_q);
-end //
+create or replace function getKeys (_pattern text)
+returns table as return
+  select k from keyspace where k like _pattern //
 
 create or replace procedure keyDelete (_k text)
 returns boolean as
 begin
   start transaction;
+
+  delete from keyspace where k = _k;
 
   delete from blobvalues where k = _k;
   if row_count() > 0 then
@@ -57,7 +29,7 @@ begin
     return true;
   end if;
 
-  delete from listvalues where k = _k;
+  delete from setvalues where k = _k;
   if row_count() > 0 then
     commit;
     return true;
@@ -67,38 +39,70 @@ begin
   return false;
 end //
 
-create or replace procedure blobSet (_k text, _v blob)
-as
-begin
+create or replace procedure flushAll ()
+as begin
   start transaction;
-  call assertKeyIsBlob(_k);
+  delete from keyspace;
+  delete from blobvalues;
+  delete from listvalues;
+  delete from setvalues;
+  commit;
+end //
+
+create or replace function assertType (
+  _actual enum("blob", "set", "list"),
+  _expected enum("blob", "set", "list")
+) returns text
+as begin
+  if _actual != _expected then
+    raise user_exception(concat("type mismatch; got ", _actual, ", expected ", _expected));
+  end if;
+  return _actual;
+end //
+
+-- assertKey must be used within a transaction
+-- will rollback the parent transaction on failure
+create or replace procedure assertKey (_k text, _type enum("blob", "set", "list"))
+as
+declare
+  _q query(t text) = select (select t from keyspace where k = _k);
+  _actual_type text;
+begin
+  _actual_type = scalar(_q);
+
+  if _actual_type is null then
+    -- new key
+    insert into keyspace (k, t) values (_k, _type)
+      on duplicate key update t = assertType(t, _type);
+  elsif _actual_type != _type then
+    raise user_exception(concat("type mismatch; got ", _actual_type, ", expected ", _type));
+  end if;
+
+exception when others then rollback; raise;
+end //
+
+create or replace procedure blobSet (_k text, _v blob)
+as begin
+  start transaction;
+  call assertKey(_k, "blob");
 
   insert into blobvalues (k, v) values (_k, _v)
     on duplicate key update v = values(v);
+
   commit;
-
-exception when others then rollback; raise;
 end //
 
-create or replace procedure blobGet (_k text)
-returns query(b blob) as
-declare
-  _q query(b blob) = select v from blobvalues where k = _k;
-begin
-  call assertKeyIsBlob(_k);
-  return _q;
-end //
+create or replace function blobGet (_k text)
+returns table as return
+  select (select v from blobvalues where k = _k) as v //
 
 create or replace procedure listAppend(_k text, _v text)
-as
-begin
+as begin
   start transaction;
-  call assertKeyIsList(_k);
+  call assertKey(_k, "list");
 
   insert into listvalues (k, v) values (_k, _v);
   commit;
-
-exception when others then rollback; raise;
 end //
 
 create or replace procedure listRemove(_k text, _v text)
@@ -107,220 +111,89 @@ declare
   _rowcount int;
 begin
   start transaction;
-  call assertKeyIsList(_k);
+  call assertKey(_k, "list");
 
   delete from listvalues where k = _k and v = _v;
   _rowcount = row_count();
   commit;
 
   return _rowcount;
-
-exception when others then rollback; raise;
 end //
 
-create or replace procedure listGet(_k text)
-returns query(v text) as
-declare
-  _q query(v text) = select * from listvalues where k = _k;
-begin
-  call assertKeyIsSet(_k);
-  return _q;
-end //
+create or replace function listGet(_k text)
+returns table as return
+  select v from listvalues where k = _k //
 
-create or replace procedure listRange(_k text, _start int, _end int)
-returns QUERY(v text) as
-declare
-  _return QUERY(v text) =
-    select v
-    from (
-      select v, row_number() over (order by ts, seq) as _rownum
-      from listvalues
-      where k = _k
-    )
-    where _rownum >= _start and _rownum <= _end
-    order by _rownum asc;
-begin
-  call assertKeyIsList(_k);
-  return _return;
-end //
+create or replace function listRange(_k text, _start int, _end int)
+returns table as return
+  select v
+  from (
+    select v, row_number() over (order by ts, seq) as _rownum
+    from listvalues
+    where k = _k
+  )
+  where _rownum >= _start and _rownum <= _end
+  order by _rownum asc //
 
 create or replace procedure setAdd(_k text, _v text)
-as
-begin
+as begin
   start transaction;
-  call assertKeyIsSet(_k);
-
+  call assertKey(_k, "set");
   insert ignore into setvalues (k, v) values (_k, _v);
   commit;
-
-exception when others then rollback; raise;
 end //
 
 create or replace procedure setRemove(_k text, _v text)
-as
+returns int as
+declare
+  _rowcount int;
 begin
   start transaction;
-  call assertKeyIsSet(_k);
-
+  call assertKey(_k, "set");
   delete from setvalues where k = _k and v = _v;
+  _rowcount = row_count();
   commit;
-
-exception when others then rollback; raise;
+  return _rowcount;
 end //
 
-create or replace procedure setGet(_k text)
-returns query(v text) as
-declare
-  _q query(v text) = select v from setvalues where k = _k;
-begin
-  call assertKeyIsSet(_k);
-  return _q;
-end //
+create or replace function setGet(_k text)
+returns table as return
+  select v from setvalues where k = _k //
 
-create or replace procedure setUnion2(_a text, _b text)
-returns query(v text) as
-declare
-  _q query(v text) = select distinct(v) from setvalues where k in (_a, _b);
-begin
-  -- TODO: need to assert all _keys are SETs
-  return _q;
-end //
+create or replace function setUnion2(_a text, _b text)
+returns table as return select distinct(v) from setvalues where k in (_a, _b) //
 
-create or replace procedure setUnion3(_a text, _b text, _c text)
-returns query(v text) as
-declare
-  _q query(v text) = select distinct(v) from setvalues where k in (_a, _b, _c);
-begin
-  -- TODO: need to assert all _keys are SETs
-  return _q;
-end //
+create or replace function setUnion3(_a text, _b text, _c text)
+returns table as return select distinct(v) from setvalues where k in (_a, _b, _c) //
 
-create or replace procedure setUnion4(_a text, _b text, _c text, _d text)
-returns query(v text) as
-declare
-  _q query(v text) = select distinct(v) from setvalues where k in (_a, _b, _c, _d);
-begin
-  -- TODO: need to assert all _keys are SETs
-  return _q;
-end //
+create or replace function setUnion4(_a text, _b text, _c text, _d text)
+returns table as return select distinct(v) from setvalues where k in (_a, _b, _c, _d) //
 
-create or replace procedure setIntersect2(_a text, _b text)
-returns query(v text) as
-declare
-  _q query(v text) =
+create or replace function setIntersect2(_a text, _b text)
+returns table as return
     select distinct a.v
     from setvalues a, setvalues b
     where
       a.k = _a
-      and b.k = _b and a.v = b.v;
-begin
-  -- TODO: need to assert all _keys are SETs
-  return _q;
-end //
+      and b.k = _b and a.v = b.v //
 
-create or replace procedure setIntersect3(_a text, _b text, _c text)
-returns query(v text) as
-declare
-  _q query(v text) =
+create or replace function setIntersect3(_a text, _b text, _c text)
+returns table as return
     select distinct a.v
     from setvalues a, setvalues b, setvalues c
     where
       a.k = _a
       and b.k = _b and a.v = b.v
-      and c.k = _c and a.v = c.v;
-begin
-  -- TODO: need to assert all _keys are SETs
-  return _q;
-end //
+      and c.k = _c and a.v = c.v //
 
-create or replace procedure setIntersect4(_a text, _b text, _c text, _d text)
-returns query(v text) as
-declare
-  _q query(v text) =
+create or replace function setIntersect4(_a text, _b text, _c text, _d text)
+returns table as return
     select distinct a.v
     from setvalues a, setvalues b, setvalues c, setvalues d
     where
       a.k = _a
       and b.k = _b and a.v = b.v
       and c.k = _c and a.v = c.v
-      and d.k = _d and a.v = d.v;
-begin
-  -- TODO: need to assert all _keys are SETs
-  return _q;
-end //
+      and d.k = _d and a.v = d.v //
 
 delimiter ;
-
-delete from blobvalues;
-delete from listvalues;
-delete from setvalues;
-
-select "appending values";
-call listAppend(1,1);
-call listAppend(1,2);
-call listAppend(1,3);
-call listAppend(1,3);
-select "checking list";
-select k, v from listvalues where k = 1 order by ts, seq;
-
-select "list range 0,10";
-echo listRange(1,0,10);
-select "list range 1,10";
-echo listRange(1,1,10);
-select "list range 1,2";
-echo listRange(1,1,2);
-select "list range 2,4";
-echo listRange(1,2,4);
-
-select "removing (1,3)";
-echo listRemove(1,3);
-select k, v from listvalues where k = 1 order by ts, seq;
-
-select "removing (1,1)";
-echo listRemove(1,1);
-select k, v from listvalues where k = 1 order by ts, seq;
-
-select "removing (1,1) (again)";
-echo listRemove(1,1);
-select k, v from listvalues where k = 1 order by ts, seq;
-
-select "keyExists(1)";
-echo keyExists(1);
-select "keyDelete(1)";
-echo keyDelete(1);
-select "keyExists(1)";
-echo keyExists(1);
-
-select "blob functions";
-call blobSet(1,1);
-echo blobGet(1);
-call blobSet(2,2);
-echo blobGet(2);
-call blobSet(2,3);
-echo blobGet(2);
-
--- should fail
-call listAppend(1,1);
-
--- should succeed
-call listAppend(3,1);
-
--- should fail
-call blobSet(3,1);
-
-delete from blobvalues;
-delete from listvalues;
-delete from setvalues;
-
-call setAdd(1,1);
-call setAdd(1,1);
-call setAdd(1,2);
-call setAdd(1,3);
-
-call setAdd(2,3);
-call setAdd(2,4);
-call setAdd(2,5);
-
-echo setGet(1);
-echo setUnion2(1,2); -- should be 1,2,3,4,5
-echo setIntersect2(1,2); -- should be 3

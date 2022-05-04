@@ -2,6 +2,12 @@ drop database if exists kv;
 create database kv;
 use kv;
 
+create rowstore table keyspace (
+  k text,
+  t enum("blob", "set", "list"),
+  primary key (k)
+);
+
 create table blobvalues (
   k text,
   v blob,
@@ -31,12 +37,4 @@ create table listvalues (
   shard (k),
   sort key (k, ts, seq),
   unique key (k, ts, seq) using hash
-);
-
-create view keyspace as (
-  select k from blobvalues
-  union
-  select k from setvalues
-  union
-  select k from listvalues
 );
