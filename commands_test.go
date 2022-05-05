@@ -3,7 +3,6 @@ package s2kv_test
 import (
 	"flag"
 	"fmt"
-	"log"
 	"s2kv"
 	"testing"
 
@@ -191,6 +190,35 @@ func TestAll(t *testing.T) {
 				mockSimpleString("OK"),
 				mockCmd("EXISTS", "key"),
 				mockInt(1),
+			},
+		},
+		{
+			name: "INCRBY",
+			ops: []TestOp{
+				mockCmd("INCRBY", "foo", "0"),
+				mockInt(0),
+				mockCmd("GET", "foo"),
+				mockBulk("0"),
+				mockCmd("INCRBY", "foo", "1"),
+				mockInt(1),
+				mockCmd("GET", "foo"),
+				mockBulk("1"),
+				mockCmd("INCRBY", "foo", "10"),
+				mockInt(11),
+				mockCmd("GET", "foo"),
+				mockBulk("11"),
+				mockCmd("INCRBY", "foo", "-5"),
+				mockInt(6),
+				mockCmd("GET", "foo"),
+				mockBulk("6"),
+				mockCmd("INCRBY", "bar", "-5"),
+				mockInt(-5),
+				mockCmd("GET", "bar"),
+				mockBulk("-5"),
+				mockCmd("INCRBY", "baz", "100"),
+				mockInt(100),
+				mockCmd("GET", "baz"),
+				mockBulk("100"),
 			},
 		},
 		{
@@ -391,7 +419,7 @@ func TestAll(t *testing.T) {
 			}
 
 			for _, cmd := range cmds {
-				log.Printf("running: %s", s2kv.CommandString(cmd))
+				t.Logf("running: %s", s2kv.CommandString(cmd))
 				err := s2kv.CommandHandlers[string(cmd.Get(0))](db, writer, cmd)
 				if err != nil {
 					t.Error(err)

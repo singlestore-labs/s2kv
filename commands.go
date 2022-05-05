@@ -39,6 +39,20 @@ var CommandHandlers = map[string]CommandHandler{
 		return w.WriteSimpleString("OK")
 	},
 
+	"INCRBY": func(db *SingleStore, w Writer, c Command) error {
+		key := string(c.Get(1))
+		val, err := strconv.ParseInt(string(c.Get(2)), 10, 64)
+		if err != nil {
+			return err
+		}
+
+		result, err := db.IncrBy(key, val)
+		if err != nil {
+			return err
+		}
+		return w.WriteInt(result)
+	},
+
 	"GET": func(db *SingleStore, w Writer, c Command) error {
 		key := string(c.Get(1))
 		val, err := db.BlobGet(key)

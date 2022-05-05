@@ -86,6 +86,33 @@ create or replace function blobGet (_k text)
 returns table as return
   select (select v from blobvalues where k = _k) as v //
 
+create or replace function assertNotNull (_v blob) returns blob
+as begin
+  if _v is null then
+    raise user_exception("invalid operation");
+  end if;
+  return _v;
+end //
+
+create or replace procedure incrBy (_k text, _v bigint) returns bigint
+as
+declare
+  _ret_q query(v bigint) = select v :> bigint from blobvalues where k = _k;
+  _ret bigint;
+begin
+  start transaction;
+  call assertKey(_k, "blob");
+
+  insert into blobvalues (k, v) values (_k, _v)
+    on duplicate key update v = assertNotNull(v + _v);
+
+  _ret = scalar(_ret_q);
+
+  commit;
+
+  return _ret;
+end //
+
 create or replace procedure listAppend(_k text, _v text)
 as begin
   start transaction;

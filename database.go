@@ -97,6 +97,15 @@ func (s *SingleStore) BlobGet(k string) ([]byte, error) {
 	return out, nil
 }
 
+func (s *SingleStore) IncrBy(k string, v int64) (int64, error) {
+	var out int64
+	err := s.db.Get(&out, "echo incrBy(?, ?)", k, v)
+	if err != nil {
+		return 0, err
+	}
+	return out, nil
+}
+
 func (s *SingleStore) ListAppend(k string, v []byte) error {
 	_, err := s.db.Exec("call listAppend(?, ?)", k, v)
 	return err
