@@ -194,10 +194,10 @@ func commandSliceStr(c Command, start, end int) []string {
 	return ret
 }
 
-func commandString(c Command) string {
+func CommandString(c Command) string {
 	ret := ""
-	for i := 1; i < c.ArgCount(); i++ {
-		if i > 1 {
+	for i := 0; i < c.ArgCount(); i++ {
+		if i > 0 {
 			ret += " "
 		}
 		ret += string(c.Get(i))

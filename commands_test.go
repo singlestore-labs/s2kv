@@ -3,6 +3,7 @@ package s2kv_test
 import (
 	"flag"
 	"fmt"
+	"log"
 	"s2kv"
 	"testing"
 
@@ -121,12 +122,29 @@ func TestAll(t *testing.T) {
 			},
 		},
 		{
-			name: "SET then GET",
+			name: "GET",
 			ops: []TestOp{
 				mockCmd("SET", "foo", "bar"),
 				mockSimpleString("OK"),
 				mockCmd("GET", "foo"),
 				mockBulk("bar"),
+				mockCmd("SADD", "set", "foo"),
+				mockSimpleString("OK"),
+				mockCmd("GET", "set"),
+				mockBulk(nil),
+			},
+		},
+		{
+			name: "SET",
+			ops: []TestOp{
+				mockCmd("SET", "foo", "bar"),
+				mockSimpleString("OK"),
+				mockCmd("GET", "foo"),
+				mockBulk("bar"),
+				mockCmd("SET", "foo", "baz"),
+				mockSimpleString("OK"),
+				mockCmd("GET", "foo"),
+				mockBulk("baz"),
 			},
 		},
 		{
@@ -190,6 +208,157 @@ func TestAll(t *testing.T) {
 				mockBulks("bar", "baz", "baz"),
 			},
 		},
+		{
+			name: "LREM",
+			ops: []TestOp{
+				mockCmd("RPUSH", "foo", "bar"),
+				mockSimpleString("OK"),
+				mockCmd("RPUSH", "foo", "baz"),
+				mockSimpleString("OK"),
+				mockCmd("LREM", "foo", "bar"),
+				mockInt(1),
+				mockCmd("LRANGE", "foo", "0", "-1"),
+				mockBulks("baz"),
+				mockCmd("RPUSH", "foo", "baz"),
+				mockSimpleString("OK"),
+				mockCmd("LRANGE", "foo", "0", "-1"),
+				mockBulks("baz", "baz"),
+				mockCmd("LREM", "foo", "baz"),
+				mockInt(2),
+				mockCmd("LRANGE", "foo", "0", "-1"),
+				mockBulks(),
+			},
+		},
+		{
+			name: "LRANGE",
+			ops: []TestOp{
+				mockCmd("RPUSH", "foo", "1"),
+				mockSimpleString("OK"),
+				mockCmd("RPUSH", "foo", "2"),
+				mockSimpleString("OK"),
+				mockCmd("RPUSH", "foo", "3"),
+				mockSimpleString("OK"),
+				mockCmd("LRANGE", "foo", "0", "-1"),
+				mockBulks("1", "2", "3"),
+				mockCmd("LRANGE", "foo", "0", "0"),
+				mockBulks("1"),
+				mockCmd("LRANGE", "foo", "1", "1"),
+				mockBulks("2"),
+				mockCmd("LRANGE", "foo", "0", "1"),
+				mockBulks("1", "2"),
+				mockCmd("LRANGE", "foo", "1", "2"),
+				mockBulks("2", "3"),
+				mockCmd("LRANGE", "foo", "0", "2"),
+				mockBulks("1", "2", "3"),
+				mockCmd("LRANGE", "foo", "0", "100"),
+				mockBulks("1", "2", "3"),
+			},
+		},
+		{
+			name: "SADD",
+			ops: []TestOp{
+				mockCmd("SADD", "foo", "1"),
+				mockSimpleString("OK"),
+				mockCmd("SMEMBERS", "foo"),
+				mockBulks("1"),
+				mockCmd("SADD", "foo", "1"),
+				mockSimpleString("OK"),
+				mockCmd("SMEMBERS", "foo"),
+				mockBulks("1"),
+				mockCmd("SADD", "foo", "2"),
+				mockSimpleString("OK"),
+				mockCmd("SMEMBERS", "foo"),
+				mockBulks("1", "2"),
+			},
+		},
+		{
+			name: "SREM",
+			ops: []TestOp{
+				mockCmd("SADD", "foo", "1"),
+				mockSimpleString("OK"),
+				mockCmd("SADD", "foo", "2"),
+				mockSimpleString("OK"),
+				mockCmd("SADD", "foo", "3"),
+				mockSimpleString("OK"),
+				mockCmd("SREM", "foo", "1"),
+				mockInt(1),
+				mockCmd("SMEMBERS", "foo"),
+				mockBulks("2", "3"),
+				mockCmd("SREM", "foo", "1"),
+				mockInt(0),
+				mockCmd("SMEMBERS", "foo"),
+				mockBulks("2", "3"),
+				mockCmd("SREM", "foo", "2"),
+				mockInt(1),
+				mockCmd("SREM", "foo", "3"),
+				mockInt(1),
+				mockCmd("SMEMBERS", "foo"),
+				mockBulks(),
+			},
+		},
+		{
+			name: "SMEMBERS",
+			ops: []TestOp{
+				mockCmd("SADD", "foo", "1"),
+				mockSimpleString("OK"),
+				mockCmd("SADD", "foo", "2"),
+				mockSimpleString("OK"),
+				mockCmd("SADD", "foo", "3"),
+				mockSimpleString("OK"),
+				mockCmd("SMEMBERS", "foo"),
+				mockBulks("1", "2", "3"),
+			},
+		},
+		{
+			name: "SINTER",
+			ops: []TestOp{
+				mockCmd("SADD", "foo", "1"),
+				mockSimpleString("OK"),
+				mockCmd("SADD", "foo", "2"),
+				mockSimpleString("OK"),
+				mockCmd("SADD", "foo", "3"),
+				mockSimpleString("OK"),
+				mockCmd("SADD", "bar", "3"),
+				mockSimpleString("OK"),
+				mockCmd("SADD", "bar", "4"),
+				mockSimpleString("OK"),
+				mockCmd("SADD", "bar", "5"),
+				mockSimpleString("OK"),
+				mockCmd("SINTER", "foo", "bar"),
+				mockBulks("3"),
+				mockCmd("SADD", "t", "1"),
+				mockSimpleString("OK"),
+				mockCmd("SADD", "t2", "2"),
+				mockSimpleString("OK"),
+				mockCmd("SINTER", "t", "t2"),
+				mockBulks(),
+			},
+		},
+		{
+			name: "SUNION",
+			ops: []TestOp{
+				mockCmd("SADD", "foo", "1"),
+				mockSimpleString("OK"),
+				mockCmd("SADD", "foo", "2"),
+				mockSimpleString("OK"),
+				mockCmd("SADD", "foo", "3"),
+				mockSimpleString("OK"),
+				mockCmd("SADD", "bar", "3"),
+				mockSimpleString("OK"),
+				mockCmd("SADD", "bar", "4"),
+				mockSimpleString("OK"),
+				mockCmd("SADD", "bar", "5"),
+				mockSimpleString("OK"),
+				mockCmd("SUNION", "foo", "bar"),
+				mockBulks("1", "2", "3", "4", "5"),
+				mockCmd("SADD", "t", "1"),
+				mockSimpleString("OK"),
+				mockCmd("SADD", "t2", "2"),
+				mockSimpleString("OK"),
+				mockCmd("SUNION", "t", "t2"),
+				mockBulks("1", "2"),
+			},
+		},
 	}
 
 	db := GetSingleStore(t)
@@ -222,6 +391,7 @@ func TestAll(t *testing.T) {
 			}
 
 			for _, cmd := range cmds {
+				log.Printf("running: %s", s2kv.CommandString(cmd))
 				err := s2kv.CommandHandlers[string(cmd.Get(0))](db, writer, cmd)
 				if err != nil {
 					t.Error(err)
@@ -229,13 +399,31 @@ func TestAll(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("all commands have a test", func(t *testing.T) {
+		expectedTestNames := make([]string, 0, len(s2kv.CommandHandlers))
+		for name := range s2kv.CommandHandlers {
+			expectedTestNames = append(expectedTestNames, name)
+		}
+		actualTestNames := make([]string, 0, len(tests))
+		for _, test := range tests {
+			actualTestNames = append(actualTestNames, test.name)
+		}
+		expect := gomega.ConsistOf(expectedTestNames)
+		if matches, _ := expect.Match(actualTestNames); !matches {
+			t.Error(expect.FailureMessage(actualTestNames))
+		}
+	})
 }
 
 func NewCmd(ctrl *gomock.Controller, args ...string) *MockCommand {
 	cmd := NewMockCommand(ctrl)
 	cmd.EXPECT().ArgCount().Return(len(args)).AnyTimes()
 	for i, arg := range args {
-		cmd.EXPECT().Get(i).Return([]byte(arg))
+		// we expect Get to be called at least twice
+		// first to log the command in the test above
+		// and second during the actual command processing
+		cmd.EXPECT().Get(i).Return([]byte(arg)).MinTimes(2)
 	}
 	return cmd
 }

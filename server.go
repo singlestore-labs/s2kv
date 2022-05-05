@@ -66,7 +66,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 		if ew != nil {
 			_ = writer.WriteError(ew.Error())
 			writer.Flush()
-			log.Printf("Error on `%s`: %s", commandString(command), ew)
+			log.Printf("Error on `%s`: %s", CommandString(command), ew)
 			break
 		}
 	}
