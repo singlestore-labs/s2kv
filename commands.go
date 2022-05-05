@@ -4,6 +4,8 @@ import (
 	"strconv"
 )
 
+//go:generate mockgen -destination=mocks_test.go -package=s2kv_test . Command,Writer
+
 type Command interface {
 	Get(int) []byte
 	ArgCount() int
