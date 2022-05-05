@@ -1,6 +1,6 @@
 module s2kv
 
-go 1.17
+go 1.18
 
 require github.com/secmask/go-redisproto v0.1.0
 

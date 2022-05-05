@@ -1,0 +1,23 @@
+name: build and test
+on: [push]
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      singlestore:
+        # check for new versions at https://hub.docker.com/r/singlestore/cluster-in-a-box/tags
+        image: singlestore/cluster-in-a-box:alma-7.8.2-8c7b918527-4.0.5-1.13.6
+        ports:
+          - 3306:3306
+        env:
+          LICENSE_KEY: ${SINGLESTORE_LICENSE}
+          ROOT_PASSWORD: "test"
+          START_AFTER_INIT: "Y"
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: "1.18"
+      - run: go test -config config.github.toml

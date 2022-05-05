@@ -24,7 +24,7 @@ This git repo includes a [VS Code development container][vscode-devcontainer] co
 
 If you want to run s2kv without using a dev container you will need to provision the following dependencies:
 
- * [golang][golang] 1.17 or above
+ * [golang][golang]
  * [mockgen][mockgen]
  * [redis-cli][redis-cli]
  * [redis-benchmark][redis-benchmark]
