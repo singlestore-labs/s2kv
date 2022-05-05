@@ -185,3 +185,35 @@ func (s *SingleStore) SetIntersect(keys ...string) ([][]byte, error) {
 	}
 	return out, err
 }
+
+func (s *SingleStore) SetsWithMember(v []byte) ([]string, error) {
+	var out []string
+	err := s.db.Select(&out, "select k from setsWithMember(?)", v)
+	return out, err
+}
+
+func (s *SingleStore) SetCardinality(k string) (int64, error) {
+	var out int64
+	err := s.db.Get(&out, "select * from setCardinality(?)", k)
+	if err != nil {
+		return 0, err
+	}
+	return out, nil
+}
+
+func (s *SingleStore) SetIntersectCardinality(keys ...string) (int64, error) {
+	var out int64
+	var err error
+
+	switch len(keys) {
+	case 2:
+		err = s.db.Get(&out, "select * from setIntersectCardinality2(?, ?)", keys[0], keys[1])
+	case 3:
+		err = s.db.Get(&out, "select * from setIntersectCardinality3(?, ?, ?)", keys[0], keys[1], keys[2])
+	case 4:
+		err = s.db.Get(&out, "select * from setIntersectCardinality4(?, ?, ?, ?)", keys[0], keys[1], keys[2], keys[3])
+	default:
+		err = errors.New("setIntersectCardinality only supports 2-4 keys")
+	}
+	return out, err
+}

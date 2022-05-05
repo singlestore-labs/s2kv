@@ -127,6 +127,20 @@ func (mr *MockWriterMockRecorder) WriteBulkString(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteBulkString", reflect.TypeOf((*MockWriter)(nil).WriteBulkString), arg0)
 }
 
+// WriteBulkStrings mocks base method.
+func (m *MockWriter) WriteBulkStrings(arg0 []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteBulkStrings", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WriteBulkStrings indicates an expected call of WriteBulkStrings.
+func (mr *MockWriterMockRecorder) WriteBulkStrings(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteBulkStrings", reflect.TypeOf((*MockWriter)(nil).WriteBulkStrings), arg0)
+}
+
 // WriteBulks mocks base method.
 func (m *MockWriter) WriteBulks(arg0 ...[]byte) error {
 	m.ctrl.T.Helper()

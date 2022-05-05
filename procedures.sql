@@ -218,4 +218,28 @@ returns table as return
       and c.k = _c and a.v = c.v
       and d.k = _d and a.v = d.v //
 
+create or replace function setsWithMember(_v blob)
+returns table as return
+    select k from setvalues where v = _v //
+
+create or replace function setCardinality(_k text)
+returns table as return
+    select count(*) from setvalues where k = _k //
+
+create or replace function setIntersectCardinality2(_a text, _b text)
+returns table as return
+    select count(distinct(a.v))
+    from setvalues a, setvalues b
+    where
+      a.k = _a
+      and b.k = _b and a.v = b.v //
+
+create or replace function setIntersectCardinality3(_a text, _b text, _c text)
+returns table as return
+    select count(*) from setIntersect3(_a, _b, _c) //
+
+create or replace function setIntersectCardinality4(_a text, _b text, _c text, _d text)
+returns table as return
+    select count(*) from setIntersect4(_a, _b, _c, _d) //
+
 delimiter ;

@@ -16,6 +16,7 @@ type Writer interface {
 	WriteBulk([]byte) error
 	WriteBulks(...[]byte) error
 	WriteBulkString(string) error
+	WriteBulkStrings([]string) error
 	WriteSimpleString(string) error
 	WriteInt(int64) error
 	WriteError(string) error
@@ -197,6 +198,33 @@ var CommandHandlers = map[string]CommandHandler{
 			return err
 		}
 		return w.WriteBulks(out...)
+	},
+
+	"SINTERCARD": func(db *SingleStore, w Writer, c Command) error {
+		keys := commandSliceStr(c, 1, c.ArgCount())
+		out, err := db.SetIntersectCardinality(keys...)
+		if err != nil {
+			return err
+		}
+		return w.WriteInt(out)
+	},
+
+	"SWITHMEMBER": func(db *SingleStore, w Writer, c Command) error {
+		val := c.Get(1)
+		out, err := db.SetsWithMember(val)
+		if err != nil {
+			return err
+		}
+		return w.WriteBulkStrings(out)
+	},
+
+	"SCARD": func(db *SingleStore, w Writer, c Command) error {
+		key := string(c.Get(1))
+		n, err := db.SetCardinality(key)
+		if err != nil {
+			return err
+		}
+		return w.WriteInt(n)
 	},
 }
 

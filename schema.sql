@@ -14,7 +14,8 @@ create table blobvalues (
 
   shard (k),
   sort key (),
-  unique key (k) using hash
+  unique key (k) using hash,
+  key (v) using hash
 );
 
 create table setvalues (
@@ -23,7 +24,8 @@ create table setvalues (
 
   shard (k),
   sort key (v),
-  unique key (k, v) using hash
+  unique key (k, v) using hash,
+  key (v) using hash
 );
 
 create table listvalues (
@@ -36,5 +38,6 @@ create table listvalues (
 
   shard (k),
   sort key (k, ts, seq),
-  unique key (k, ts, seq) using hash
+  unique key (k, ts, seq) using hash,
+  key (v) using hash
 );
