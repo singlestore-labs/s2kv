@@ -2,7 +2,6 @@ package s2kv
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -154,35 +153,25 @@ func (s *SingleStore) SetGet(k string) ([][]byte, error) {
 
 func (s *SingleStore) SetUnion(keys ...string) ([][]byte, error) {
 	var out [][]byte
-	var err error
 
-	switch len(keys) {
-	case 2:
-		err = s.db.Select(&out, "select v from setUnion2(?, ?)", keys[0], keys[1])
-	case 3:
-		err = s.db.Select(&out, "select v from setUnion3(?, ?, ?)", keys[0], keys[1], keys[2])
-	case 4:
-		err = s.db.Select(&out, "select v from setUnion4(?, ?, ?, ?)", keys[0], keys[1], keys[2], keys[3])
-	default:
-		err = errors.New("setUnion only supports 2-4 keys")
+	query, args, err := sqlx.In("echo setUnion([?])", keys)
+	if err != nil {
+		return out, err
 	}
+
+	err = s.db.Select(&out, query, args...)
 	return out, err
 }
 
 func (s *SingleStore) SetIntersect(keys ...string) ([][]byte, error) {
 	var out [][]byte
-	var err error
 
-	switch len(keys) {
-	case 2:
-		err = s.db.Select(&out, "select v from setIntersect2(?, ?)", keys[0], keys[1])
-	case 3:
-		err = s.db.Select(&out, "select v from setIntersect3(?, ?, ?)", keys[0], keys[1], keys[2])
-	case 4:
-		err = s.db.Select(&out, "select v from setIntersect4(?, ?, ?, ?)", keys[0], keys[1], keys[2], keys[3])
-	default:
-		err = errors.New("setIntersect only supports 2-4 keys")
+	query, args, err := sqlx.In("echo setIntersect([?])", keys)
+	if err != nil {
+		return out, err
 	}
+
+	err = s.db.Select(&out, query, args...)
 	return out, err
 }
 
@@ -203,17 +192,15 @@ func (s *SingleStore) SetCardinality(k string) (int64, error) {
 
 func (s *SingleStore) SetIntersectCardinality(keys ...string) (int64, error) {
 	var out int64
-	var err error
 
-	switch len(keys) {
-	case 2:
-		err = s.db.Get(&out, "select * from setIntersectCardinality2(?, ?)", keys[0], keys[1])
-	case 3:
-		err = s.db.Get(&out, "select * from setIntersectCardinality3(?, ?, ?)", keys[0], keys[1], keys[2])
-	case 4:
-		err = s.db.Get(&out, "select * from setIntersectCardinality4(?, ?, ?, ?)", keys[0], keys[1], keys[2], keys[3])
-	default:
-		err = errors.New("setIntersectCardinality only supports 2-4 keys")
+	query, args, err := sqlx.In("echo setIntersectCardinality([?])", keys)
+	if err != nil {
+		return out, err
 	}
-	return out, err
+
+	err = s.db.Get(&out, query, args...)
+	if err != nil {
+		return 0, err
+	}
+	return out, nil
 }

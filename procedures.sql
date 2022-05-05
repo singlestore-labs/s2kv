@@ -113,7 +113,7 @@ begin
   return _ret;
 end //
 
-create or replace procedure listAppend(_k text, _v text)
+create or replace procedure listAppend(_k text, _v blob)
 as begin
   start transaction;
   call assertKey(_k, "list");
@@ -122,7 +122,7 @@ as begin
   commit;
 end //
 
-create or replace procedure listRemove(_k text, _v text)
+create or replace procedure listRemove(_k text, _v blob)
 returns int as
 declare
   _rowcount int;
@@ -157,7 +157,7 @@ returns table as return
   where _rownum >= _start and _rownum <= _end
   order by _rownum asc //
 
-create or replace procedure setAdd(_k text, _v text)
+create or replace procedure setAdd(_k text, _v blob)
 as begin
   start transaction;
   call assertKey(_k, "set");
@@ -165,7 +165,7 @@ as begin
   commit;
 end //
 
-create or replace procedure setRemove(_k text, _v text)
+create or replace procedure setRemove(_k text, _v blob)
 returns int as
 declare
   _rowcount int;
@@ -182,41 +182,57 @@ create or replace function setGet(_k text)
 returns table as return
   select v from setvalues where k = _k //
 
-create or replace function setUnion2(_a text, _b text)
-returns table as return select distinct(v) from setvalues where k in (_a, _b) //
+create or replace procedure setUnion(_keys array(text))
+returns query(v blob) as
+declare
+  _q text = "select distinct(v) from setvalues where k in (";
+begin
+  if length(_keys) < 2 then
+    raise user_exception("setUnion requires at least 2 keys");
+  end if;
 
-create or replace function setUnion3(_a text, _b text, _c text)
-returns table as return select distinct(v) from setvalues where k in (_a, _b, _c) //
+  for i in 0 .. length(_keys) - 1 loop
+    if i > 0 then
+      _q = concat(_q, ",");
+    end if;
 
-create or replace function setUnion4(_a text, _b text, _c text, _d text)
-returns table as return select distinct(v) from setvalues where k in (_a, _b, _c, _d) //
+    _q = concat(_q, quote(_keys[i]));
+  end loop;
 
-create or replace function setIntersect2(_a text, _b text)
-returns table as return
-    select distinct a.v
-    from setvalues a, setvalues b
-    where
-      a.k = _a
-      and b.k = _b and a.v = b.v //
+  _q = concat(_q, ")");
 
-create or replace function setIntersect3(_a text, _b text, _c text)
-returns table as return
-    select distinct a.v
-    from setvalues a, setvalues b, setvalues c
-    where
-      a.k = _a
-      and b.k = _b and a.v = b.v
-      and c.k = _c and a.v = c.v //
+  return to_query(_q);
+end //
 
-create or replace function setIntersect4(_a text, _b text, _c text, _d text)
-returns table as return
-    select distinct a.v
-    from setvalues a, setvalues b, setvalues c, setvalues d
-    where
-      a.k = _a
-      and b.k = _b and a.v = b.v
-      and c.k = _c and a.v = c.v
-      and d.k = _d and a.v = d.v //
+create or replace procedure setIntersect(_keys array(text))
+returns query(v blob) as
+declare
+  _prefix text = "select distinct(s0.v) from ";
+  _tables text = " ";
+  _joins text = " ";
+begin
+  if length(_keys) < 2 then
+    raise user_exception("setIntersect requires at least 2 keys");
+  end if;
+
+  for i in 0 .. length(_keys) - 1 loop
+    if i = 0 then
+      _tables = concat(_tables, "setvalues s0");
+      _joins = concat(_joins, "s0.k = ", quote(_keys[0]));
+    else
+      _tables = concat(_tables, ", setvalues s", i);
+      _joins = concat(
+        _joins,
+        -- and s1.k = _keys[1]
+        " and s", i, ".k = ", quote(_keys[i]),
+        -- and s0.v = s1.v
+        " and s0.v = s", i, ".v"
+      );
+    end if;
+  end loop;
+
+  return to_query(concat(_prefix, _tables, " where ", _joins));
+end //
 
 create or replace function setsWithMember(_v blob)
 returns table as return
@@ -226,20 +242,12 @@ create or replace function setCardinality(_k text)
 returns table as return
     select count(*) from setvalues where k = _k //
 
-create or replace function setIntersectCardinality2(_a text, _b text)
-returns table as return
-    select count(distinct(a.v))
-    from setvalues a, setvalues b
-    where
-      a.k = _a
-      and b.k = _b and a.v = b.v //
-
-create or replace function setIntersectCardinality3(_a text, _b text, _c text)
-returns table as return
-    select count(*) from setIntersect3(_a, _b, _c) //
-
-create or replace function setIntersectCardinality4(_a text, _b text, _c text, _d text)
-returns table as return
-    select count(*) from setIntersect4(_a, _b, _c, _d) //
+create or replace procedure setIntersectCardinality(_keys array(text))
+returns query(c bigint) as
+declare
+  _base query(v blob) = setIntersect(_keys);
+  _q query(c bigint) = select count(*) from _base;
+begin return _q;
+end //
 
 delimiter ;
