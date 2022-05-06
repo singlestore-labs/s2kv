@@ -26,6 +26,6 @@ jobs:
         with:
           resource: http://127.0.0.1:9000/ping
           timeout: 10000
-      - run: sudo apt install mariadb-client
+      - run: sudo apt install -y mariadb-client
       - run: mysql -h 127.0.0.1 -u root -ptest <schema.sql <procedures.sql
       - run: go test -config config.github.toml
