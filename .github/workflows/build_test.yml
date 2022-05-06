@@ -11,7 +11,7 @@ jobs:
         ports:
           - 3306:3306
         env:
-          LICENSE_KEY: ${SINGLESTORE_LICENSE}
+          LICENSE_KEY: ${{ secrets.SINGLESTORE_LICENSE }}
           ROOT_PASSWORD: "test"
           START_AFTER_INIT: "Y"
 
@@ -20,7 +20,9 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: "1.18"
-      - run: docker ps
-      - run: docker logs -f $(docker ps -q | head -n 1)
-      - run: docker logs -f $(docker ps -lq | head -n 1)
+      - uses: ifaxity/wait-on-action@v1
+        with:
+          resource: tcp://127.0.0.1:3306
+          timeout: 10000
+      - run: docker logs $(docker ps -ql)
       - run: go test -config config.github.toml
