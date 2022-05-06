@@ -2,7 +2,9 @@
 
 > 👋 Hello! I'm [@carlsverre][gh-carlsverre] ([twitter][tw-carlsverre]), and I'll be helping you out today while we talk about building a key/value API on top of SingleStore. If you are playing with this project on your own and get stuck, feel free to ask for help in the [SingleStore forums][s2-forums] or via a [Github Issue][gh-issue]
 
-This project implements a key/value style API using a combination of stored procedures and user defined functions on top of [SingleStore][s2]. This project is **not production ready** and should only be used as an example of what you can do with SingleStore.
+This project implements a key/value style API using a combination of stored procedures and user defined functions on top of [SingleStore][s2].
+
+The code which is production ready is contained entirely within [schema.sql](schema.sql) and [procedures.sql](procedures.sql). All other code in this repo is not production ready and should only serve as an example of what you can do with it.
 
 For fun, this project uses [go-redisproto][redisproto] to simulate the Redis protocol for easy integration with Redis tools and libraries. By no means does this project claim to support the entirety of Redis' semantics or is trying to be a replacement for Redis in its current form. Certain workloads will run best on Redis while other workloads will benefit more from using SingleStore. Both technologies bring a different set of tradeoffs to the table.
 
