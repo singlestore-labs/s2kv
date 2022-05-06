@@ -15,7 +15,6 @@ jobs:
           LICENSE_KEY: ${{ secrets.SINGLESTORE_LICENSE }}
           ROOT_PASSWORD: "test"
           START_AFTER_INIT: "Y"
-          HTTP_API: "on"
 
     steps:
       - uses: actions/checkout@v3
@@ -24,8 +23,8 @@ jobs:
           go-version: "1.18"
       - uses: ifaxity/wait-on-action@v1
         with:
-          resource: http://127.0.0.1:9000/ping
-          timeout: 10000
+          resource: tcp://127.0.0.1:3306
+          timeout: 30000
       - run: docker logs $(docker ps -ql)
       - run: mysql -h 127.0.0.1 -u root -ptest <schema.sql <procedures.sql
       - run: go test -config config.github.toml
