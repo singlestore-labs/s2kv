@@ -20,12 +20,18 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: "1.18"
-      - run: |
+      - name: wait for singlestore to start
+        run: |
           until mysql -h 127.0.0.1 -u root -ptest -e "select 1"; do
             echo "waiting for mysql..."
-            docker logs $(docker ps -ql)
             sleep 1
           done
-      - run: docker logs $(docker ps -ql)
-      - run: mysql -h 127.0.0.1 -u root -ptest <schema.sql <procedures.sql
-      - run: go test -config config.github.toml
+      - name: singlestore container logs
+        run: docker logs $(docker ps -ql)
+      - name: setup schema
+        run: |
+          mysql -h 127.0.0.1 -u root -ptest -e "create database kv"
+          mysql -h 127.0.0.1 -u root -ptest kv <schema.sql
+          mysql -h 127.0.0.1 -u root -ptest kv <procedures.sql
+      - name: run tests
+        run: go test -config config.github.toml
