@@ -18,6 +18,11 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: "1.18"
+      - run: |
+          until mysql -h 127.0.0.1 -u root -ptest -e "select 1"; do
+            echo "waiting for mysql..."
+            sleep 1
+          done
       - run: docker logs $(docker ps -ql)
       - run: mysql -h 127.0.0.1 -u root -ptest <schema.sql <procedures.sql
       - run: go test -config config.github.toml
