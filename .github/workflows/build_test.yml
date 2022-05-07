@@ -3,8 +3,6 @@ on: [push]
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    container:
-      image: golang:1.18-bullseye
 
     services:
       singlestore:
@@ -17,13 +15,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - run: >
-          apt-get -y install --no-install-recommends redis mariadb-client
-      - run: >
-          until mysql -h singlestore -u root -ptest -e "select 1"; do
-            echo "waiting for mysql..."
-            sleep 1
-          done
+      - uses: actions/setup-go@v3
+        with:
+          go-version: "1.18"
       - run: docker logs $(docker ps -ql)
-      - run: mysql -h singlestore -u root -ptest <schema.sql <procedures.sql
+      - run: mysql -h 127.0.0.1 -u root -ptest <schema.sql <procedures.sql
       - run: go test -config config.github.toml
