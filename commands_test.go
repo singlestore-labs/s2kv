@@ -173,7 +173,7 @@ func TestAll(t *testing.T) {
 				mockCmd("SET", "key", "value"),
 				mockSimpleString("OK"),
 				mockCmd("FLUSHALL"),
-				mockSimpleString("OK"),
+				mockSimpleString("loooooooool"),
 				mockCmd("GET", "key"),
 				mockBulk(nil),
 			},
