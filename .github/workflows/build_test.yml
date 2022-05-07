@@ -17,9 +17,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
-        with:
-          go-version: "1.18"
+      - run: >
+          apt-get -y install --no-install-recommends redis mariadb-client
       - run: >
           until mysql -h singlestore -u root -ptest -e "select 1"; do
             echo "waiting for mysql..."
