@@ -3,14 +3,13 @@ on: [push]
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    container:
+      image: golang:1.18-bullseye
 
     services:
       singlestore:
         # check for new versions at https://hub.docker.com/r/singlestore/cluster-in-a-box/tags
         image: singlestore/cluster-in-a-box:alma-7.8.2-8c7b918527-4.0.5-1.13.6
-        ports:
-          - 3306:3306
-          - 9000:9000
         env:
           LICENSE_KEY: ${{ secrets.SINGLESTORE_LICENSE }}
           ROOT_PASSWORD: "test"
@@ -21,10 +20,11 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: "1.18"
-      - uses: ifaxity/wait-on-action@v1
-        with:
-          resource: tcp://127.0.0.1:3306
-          timeout: 30000
+      - run: >
+          until mysql -h singlestore -u root -ptest -e "select 1"; do
+            echo "waiting for mysql..."
+            sleep 1
+          done
       - run: docker logs $(docker ps -ql)
-      - run: mysql -h 127.0.0.1 -u root -ptest <schema.sql <procedures.sql
+      - run: mysql -h singlestore -u root -ptest <schema.sql <procedures.sql
       - run: go test -config config.github.toml
