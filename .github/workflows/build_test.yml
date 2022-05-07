@@ -20,6 +20,10 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: "1.18"
+      - name: build
+        run: go build s2kv/cmd/s2kv
+      - name: install go-junit-report
+        run: go install github.com/jstemmer/go-junit-report@latest
       - name: wait for singlestore to start
         run: |
           until mysql -h 127.0.0.1 -u root -ptest -e "select 1"; do
@@ -34,4 +38,9 @@ jobs:
           mysql -h 127.0.0.1 -u root -ptest kv <schema.sql
           mysql -h 127.0.0.1 -u root -ptest kv <procedures.sql
       - name: run tests
-        run: go test -config config.github.toml
+        run: go test -v -config config.github.toml 2>&1 ./... | go-junit-report -set-exit-code >report.xml
+      - name: publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v1
+        if: always()
+        with:
+          files: "report.xml"
