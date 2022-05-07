@@ -8,6 +8,8 @@ jobs:
       singlestore:
         # check for new versions at https://hub.docker.com/r/singlestore/cluster-in-a-box/tags
         image: singlestore/cluster-in-a-box:alma-7.8.2-8c7b918527-4.0.5-1.13.6
+        ports:
+          - "3306:3306"
         env:
           LICENSE_KEY: ${{ secrets.SINGLESTORE_LICENSE }}
           ROOT_PASSWORD: "test"
