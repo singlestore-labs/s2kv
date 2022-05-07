@@ -21,6 +21,7 @@ jobs:
       - run: |
           until mysql -h 127.0.0.1 -u root -ptest -e "select 1"; do
             echo "waiting for mysql..."
+            docker logs $(docker ps -ql)
             sleep 1
           done
       - run: docker logs $(docker ps -ql)
