@@ -4,9 +4,9 @@
 
 This project implements a key/value style API using a combination of stored procedures and user defined functions on top of [SingleStore][s2].
 
-The code which is production ready is contained entirely within [schema.sql](schema.sql) and [procedures.sql](procedures.sql). All other code in this repo is not production ready and should only serve as an example of what you can do with it.
+The code which is production ready is contained entirely within [schema.sql](schema.sql) and [procedures.sql](procedures.sql). **The rest of the code in this repo is not production ready and should only serve as an example of how you could use the procedures and functions in an application.**
 
-**For fun**, this project uses [go-redisproto][redisproto] to simulate the Redis protocol using these stored procedures and functions. By no means does this project claim to support the entirety of Redis' semantics or is trying to be a replacement for Redis in its current form. **This project is only a demo of what you can do using SingleStore.**
+**For fun**, this project uses [go-redisproto][redisproto] to simulate a part of the Redis protocol using these stored procedures and functions. By no means does this project claim to support the entirety of Redis' semantics or is trying to be a replacement for Redis in its current form. This project also does not integrate SingleStore with Redis nor does it help with users migrating from Redis. **This project is only a demo of what you can do using SingleStore.**
 
 Some things to note about the key/value (KV) implementation in this project:
 
