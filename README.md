@@ -1,5 +1,7 @@
 # Demo of a key/value API implemented on top of SingleStore
 
+**Attention**: The code in this repository is intended for experimental use only and is not fully tested, documented, or supported by SingleStore. Visit the [SingleStore Forums](https://www.singlestore.com/forum/) to ask questions about this repository.
+
 > 👋 Hello! I'm [@carlsverre][gh-carlsverre] ([twitter][tw-carlsverre]), and I'll be helping you out today while we talk about building a key/value API on top of SingleStore. If you are playing with this project on your own and get stuck, feel free to ask for help in the [SingleStore forums][s2-forums] or via a [Github Issue][gh-issue].
 
 This project implements a key/value style API using a combination of stored procedures and user defined functions on top of [SingleStore][s2].
